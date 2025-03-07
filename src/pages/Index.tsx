@@ -1,12 +1,188 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import Navbar from '@/components/Navbar';
+import FeaturedContent from '@/components/FeaturedContent';
+import TrackCard, { Track } from '@/components/TrackCard';
+import MusicPlayer from '@/components/MusicPlayer';
+
+// Mock data for our application
+const featuredContent = {
+  title: "Midnight Memory",
+  artist: "Aurora Skies",
+  coverUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop",
+};
+
+const recentTracks: Track[] = [
+  {
+    id: "1",
+    title: "Midnight Memory",
+    artist: "Aurora Skies",
+    coverUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop",
+    duration: "3:45",
+  },
+  {
+    id: "2",
+    title: "Ocean Waves",
+    artist: "Serene Sound",
+    coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=2070&auto=format&fit=crop",
+    duration: "4:12",
+  },
+  {
+    id: "3",
+    title: "Neon Dreams",
+    artist: "Electric Echo",
+    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=2074&auto=format&fit=crop",
+    duration: "3:28",
+  },
+  {
+    id: "4",
+    title: "Mountain High",
+    artist: "The Climbers",
+    coverUrl: "https://images.unsplash.com/photo-1501612780327-45045538702b?q=80&w=2070&auto=format&fit=crop",
+    duration: "5:16",
+  },
+];
+
+const popularPlaylists = [
+  {
+    id: "p1",
+    title: "Chill Vibes",
+    description: "Relaxing tunes for your evening",
+    coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2069&auto=format&fit=crop",
+    trackCount: 24,
+  },
+  {
+    id: "p2",
+    title: "Workout Mix",
+    description: "Energetic beats to keep you moving",
+    coverUrl: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?q=80&w=2070&auto=format&fit=crop",
+    trackCount: 18,
+  },
+  {
+    id: "p3",
+    title: "Focus Flow",
+    description: "Ambient sounds for deep concentration",
+    coverUrl: "https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?q=80&w=2083&auto=format&fit=crop",
+    trackCount: 32,
+  },
+];
 
 const Index = () => {
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  
+  const handlePlayTrack = (track: Track) => {
+    setCurrentTrack(track);
+    setPlayingTrackId(track.id);
+    setIsPlaying(true);
+  };
+  
+  const handlePauseTrack = () => {
+    setIsPlaying(false);
+  };
+  
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+  
+  const handleNext = () => {
+    if (!currentTrack) return;
+    
+    const currentIndex = recentTracks.findIndex(track => track.id === currentTrack.id);
+    const nextIndex = (currentIndex + 1) % recentTracks.length;
+    setCurrentTrack(recentTracks[nextIndex]);
+    setPlayingTrackId(recentTracks[nextIndex].id);
+  };
+  
+  const handlePrevious = () => {
+    if (!currentTrack) return;
+    
+    const currentIndex = recentTracks.findIndex(track => track.id === currentTrack.id);
+    const prevIndex = (currentIndex - 1 + recentTracks.length) % recentTracks.length;
+    setCurrentTrack(recentTracks[prevIndex]);
+    setPlayingTrackId(recentTracks[prevIndex].id);
+  };
+  
+  const handlePlayFeatured = () => {
+    const featured = recentTracks.find(track => track.id === "1");
+    if (featured) {
+      handlePlayTrack(featured);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen pb-20">
+      <Navbar />
+      
+      <main className="container mx-auto px-4 md:px-6 pt-24 pb-8">
+        <section className="mb-10">
+          <FeaturedContent 
+            title={featuredContent.title}
+            artist={featuredContent.artist}
+            coverUrl={featuredContent.coverUrl}
+            onPlay={handlePlayFeatured}
+          />
+        </section>
+        
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-2xl font-semibold">Recently Played</h2>
+            <a href="#" className="text-sm text-primary hover:underline">View All</a>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {recentTracks.map(track => (
+              <TrackCard 
+                key={track.id}
+                track={track}
+                isPlaying={isPlaying && playingTrackId === track.id}
+                onPlay={() => handlePlayTrack(track)}
+                onPause={handlePauseTrack}
+              />
+            ))}
+          </div>
+        </section>
+        
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-2xl font-semibold">Popular Playlists</h2>
+            <a href="#" className="text-sm text-primary hover:underline">View All</a>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {popularPlaylists.map(playlist => (
+              <div key={playlist.id} className="track-container group">
+                <div className="relative aspect-square overflow-hidden">
+                  <img
+                    src={playlist.coverUrl}
+                    alt={playlist.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Play className="w-10 h-10 text-white" />
+                  </div>
+                </div>
+                
+                <div className="p-4">
+                  <h3 className="font-medium">{playlist.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-1">{playlist.description}</p>
+                  <p className="text-xs text-muted-foreground">{playlist.trackCount} tracks</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+      
+      <MusicPlayer 
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        onPlayPause={handlePlayPause}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+      />
     </div>
   );
 };
