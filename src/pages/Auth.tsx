@@ -17,7 +17,7 @@ const Auth = () => {
   return (
     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background to-background/80">
       <div className="w-full max-w-md">
-        <AuthModal defaultView="sign-in" />
+        <AuthModal defaultView="signin" />
       </div>
     </div>
   );

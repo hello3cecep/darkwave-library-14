@@ -6,12 +6,17 @@ import SignIn from './SignIn';
 import SignUp from './SignUp';
 
 interface AuthModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  defaultView?: 'signin' | 'signup';
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<string>('signin');
+const AuthModal: React.FC<AuthModalProps> = ({ 
+  isOpen = true, 
+  onClose = () => {}, 
+  defaultView = 'signin' 
+}) => {
+  const [activeTab, setActiveTab] = useState<string>(defaultView);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -22,7 +27,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="signin" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue={defaultView} value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
