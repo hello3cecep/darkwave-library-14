@@ -9,6 +9,7 @@ export type Track = {
   artist: string;
   coverUrl: string;
   duration: string;
+  description?: string;
 };
 
 interface TrackCardProps {
@@ -61,6 +62,9 @@ const TrackCard: React.FC<TrackCardProps> = ({
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-medium truncate">{track.title}</h3>
           <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+          {track.description && (
+            <p className="text-xs text-muted-foreground line-clamp-1">{track.description}</p>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -98,6 +102,9 @@ const TrackCard: React.FC<TrackCardProps> = ({
           <div>
             <h3 className="font-medium truncate">{track.title}</h3>
             <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+            {track.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{track.description}</p>
+            )}
           </div>
           <LikeButton trackId={track.id} size="sm" />
         </div>
