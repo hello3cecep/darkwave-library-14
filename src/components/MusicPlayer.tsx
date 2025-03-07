@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type Track } from './TrackCard';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MusicPlayerProps {
   currentTrack: Track | null;
@@ -28,19 +29,34 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const [isRepeat, setIsRepeat] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
-    if (audioRef.current) {
+    if (currentTrack) {
+      setCurrentTime(0);
+      setAudioLoaded(false);
+    }
+  }, [currentTrack]);
+  
+  useEffect(() => {
+    if (audioRef.current && currentTrack?.audioUrl) {
       if (isPlaying) {
         audioRef.current.play().catch(error => {
           console.error("Error playing audio:", error);
+          toast({
+            title: "Playback Error",
+            description: "Could not play the audio track. Please try again.",
+            variant: "destructive",
+          });
+          onPlayPause();
         });
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentTrack]);
+  }, [isPlaying, currentTrack, audioLoaded, onPlayPause]);
   
   useEffect(() => {
     if (audioRef.current) {
@@ -60,6 +76,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(error => {
           console.error("Error replaying audio:", error);
+          toast({
+            title: "Playback Error",
+            description: "Could not replay the track. Please try again.",
+            variant: "destructive",
+          });
         });
       }
     } else {
@@ -112,6 +133,21 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     setIsMuted(!isMuted);
   };
   
+  const handleAudioLoaded = () => {
+    setAudioLoaded(true);
+    console.log("Audio loaded successfully:", currentTrack?.title);
+  };
+  
+  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
+    console.error("Audio error:", e);
+    toast({
+      title: "Audio Error",
+      description: "Could not load the audio file. Please try another track.",
+      variant: "destructive",
+    });
+    setAudioLoaded(false);
+  };
+  
   if (!currentTrack) {
     return (
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-lg border-t border-white/5 z-40 px-4 flex items-center justify-center">
@@ -127,12 +163,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         isExpanded ? "bottom-0 h-96" : "bottom-0 h-20"
       )}
     >
-      <audio 
-        ref={audioRef}
-        src={currentTrack.audioUrl}
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleTrackEnded}
-      />
+      {currentTrack.audioUrl ? (
+        <audio 
+          ref={audioRef}
+          src={currentTrack.audioUrl}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleTrackEnded}
+          onLoadedData={handleAudioLoaded}
+          onError={handleAudioError}
+          preload="auto"
+        />
+      ) : (
+        <div className="hidden">No audio URL available</div>
+      )}
       
       <div className="container mx-auto h-full px-4">
         <div className="h-1 w-full bg-secondary relative -mt-px">
