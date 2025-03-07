@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Play, Pause } from 'lucide-react';
 import LikeButton from './LikeButton';
@@ -10,6 +9,7 @@ export type Track = {
   coverUrl: string;
   duration: string;
   description?: string;
+  audioUrl?: string; // Add the audio URL field
 };
 
 interface TrackCardProps {

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX,
   Repeat, Shuffle, Heart, ListMusic, Maximize2, Minimize2 
@@ -29,31 +28,52 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   const [isRepeat, setIsRepeat] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // For this demo we'll just simulate progress
-  React.useEffect(() => {
-    let timer: any = null;
-    
-    if (isPlaying && currentTrack) {
-      timer = setInterval(() => {
-        setCurrentTime((prevTime) => {
-          // Convert duration from "3:45" format to seconds
-          const [mins, secs] = currentTrack.duration.split(':').map(Number);
-          const totalDuration = mins * 60 + secs;
-          
-          if (prevTime >= totalDuration) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prevTime + 1;
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+          console.error("Error playing audio:", error);
         });
-      }, 1000);
+      } else {
+        audioRef.current.pause();
+      }
     }
-    
-    return () => {
-      if (timer) clearInterval(timer);
-    };
   }, [isPlaying, currentTrack]);
+  
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume / 100;
+    }
+  }, [volume, isMuted]);
+  
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+  
+  const handleTrackEnded = () => {
+    if (isRepeat) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(error => {
+          console.error("Error replaying audio:", error);
+        });
+      }
+    } else {
+      onNext();
+    }
+  };
+  
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  };
 
   const formatTime = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60);
@@ -62,16 +82,26 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   };
   
   const getProgress = () => {
-    if (!currentTrack) return 0;
+    if (!currentTrack || !audioRef.current) return 0;
     
-    // Convert duration from "3:45" format to seconds
-    const [mins, secs] = currentTrack.duration.split(':').map(Number);
-    const totalDuration = mins * 60 + secs;
+    const duration = audioRef.current.duration || 0;
+    if (duration === 0) return 0;
     
-    return (currentTime / totalDuration) * 100;
+    return (currentTime / duration) * 100;
   };
   
-  // Handle volume icon based on volume level
+  const getDuration = () => {
+    if (!audioRef.current || !audioRef.current.duration) {
+      if (currentTrack) {
+        const [mins, secs] = currentTrack.duration.split(':').map(Number);
+        return mins * 60 + secs;
+      }
+      return 0;
+    }
+    
+    return audioRef.current.duration;
+  };
+  
   const VolumeIcon = () => {
     if (isMuted || volume === 0) return <VolumeX className="w-5 h-5" />;
     if (volume < 50) return <Volume1 className="w-5 h-5" />;
@@ -82,7 +112,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     setIsMuted(!isMuted);
   };
   
-  // If no track is loaded, show a minimal player
   if (!currentTrack) {
     return (
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-lg border-t border-white/5 z-40 px-4 flex items-center justify-center">
@@ -98,8 +127,14 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         isExpanded ? "bottom-0 h-96" : "bottom-0 h-20"
       )}
     >
+      <audio 
+        ref={audioRef}
+        src={currentTrack.audioUrl}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleTrackEnded}
+      />
+      
       <div className="container mx-auto h-full px-4">
-        {/* Progress bar at the top */}
         <div className="h-1 w-full bg-secondary relative -mt-px">
           <div 
             className="h-full bg-primary"
@@ -108,7 +143,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         </div>
         
         <div className="flex items-center justify-between h-20">
-          {/* Track info */}
           <div className="flex items-center gap-3 w-1/3">
             <div className="w-12 h-12 rounded overflow-hidden">
               <img 
@@ -132,7 +166,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
             </button>
           </div>
           
-          {/* Player controls */}
           <div className="flex items-center gap-4 justify-center w-1/3">
             <button 
               className={cn("text-muted-foreground hover:text-foreground transition-colors",
@@ -179,7 +212,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
             </button>
           </div>
           
-          {/* Volume and additional controls */}
           <div className="flex items-center gap-4 justify-end w-1/3">
             <div className="flex items-center gap-2">
               <button 
@@ -220,7 +252,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           </div>
         </div>
         
-        {/* Expanded view content */}
         {isExpanded && (
           <div className="h-[calc(100%-5rem)] p-4 animate-fade-in">
             <div className="flex h-full">
@@ -241,14 +272,17 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>{formatTime(currentTime)}</span>
-                      <span>{currentTrack.duration}</span>
+                      <span>{formatTime(getDuration())}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-secondary rounded-full">
-                      <div 
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${getProgress()}%` }}
-                      ></div>
-                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={getDuration()}
+                      value={currentTime}
+                      onChange={handleSeek}
+                      className="w-full accent-primary"
+                      aria-label="Seek"
+                    />
                   </div>
                 </div>
               </div>

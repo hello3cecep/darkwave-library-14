@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import MusicPlayer from '@/components/MusicPlayer';
@@ -80,6 +81,7 @@ const Library = () => {
           coverUrl: track.cover_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop',
           duration: track.duration,
           description: track.description,
+          audioUrl: track.audio_url, // Include audio_url in the Track object
         }));
         
         setTracks(formattedTracks);
