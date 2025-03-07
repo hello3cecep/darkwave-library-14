@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import FeaturedContent from '@/components/FeaturedContent';
 import TrackCard, { Track } from '@/components/TrackCard';
 import MusicPlayer from '@/components/MusicPlayer';
 import { Play } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useLikes } from '@/hooks/useLikes';
 
 const featuredContent = {
   title: "Midnight Memory",
@@ -11,7 +15,8 @@ const featuredContent = {
   coverUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop",
 };
 
-const recentTracks: Track[] = [
+// These tracks will be used as fallback if we can't load data from Supabase
+const fallbackTracks: Track[] = [
   {
     id: "1",
     title: "Midnight Memory",
@@ -67,9 +72,50 @@ const popularPlaylists = [
 ];
 
 const Index = () => {
+  const { user } = useAuth();
+  const { isTrackLiked } = useLikes();
+  const [tracks, setTracks] = useState<Track[]>(fallbackTracks);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(true);
+  
+  useEffect(() => {
+    const fetchTracks = async () => {
+      try {
+        setIsLoadingTracks(true);
+        
+        const { data, error } = await supabase
+          .from('tracks')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(8);
+        
+        if (error) {
+          console.error('Error fetching tracks:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const formattedTracks: Track[] = data.map(track => ({
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            coverUrl: track.cover_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop',
+            duration: track.duration
+          }));
+          
+          setTracks(formattedTracks);
+        }
+      } catch (error) {
+        console.error('Error in fetchTracks:', error);
+      } finally {
+        setIsLoadingTracks(false);
+      }
+    };
+    
+    fetchTracks();
+  }, []);
   
   const handlePlayTrack = (track: Track) => {
     setCurrentTrack(track);
@@ -88,25 +134,27 @@ const Index = () => {
   const handleNext = () => {
     if (!currentTrack) return;
     
-    const currentIndex = recentTracks.findIndex(track => track.id === currentTrack.id);
-    const nextIndex = (currentIndex + 1) % recentTracks.length;
-    setCurrentTrack(recentTracks[nextIndex]);
-    setPlayingTrackId(recentTracks[nextIndex].id);
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id);
+    const nextIndex = (currentIndex + 1) % tracks.length;
+    setCurrentTrack(tracks[nextIndex]);
+    setPlayingTrackId(tracks[nextIndex].id);
   };
   
   const handlePrevious = () => {
     if (!currentTrack) return;
     
-    const currentIndex = recentTracks.findIndex(track => track.id === currentTrack.id);
-    const prevIndex = (currentIndex - 1 + recentTracks.length) % recentTracks.length;
-    setCurrentTrack(recentTracks[prevIndex]);
-    setPlayingTrackId(recentTracks[prevIndex].id);
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id);
+    const prevIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+    setCurrentTrack(tracks[prevIndex]);
+    setPlayingTrackId(tracks[prevIndex].id);
   };
   
   const handlePlayFeatured = () => {
-    const featured = recentTracks.find(track => track.id === "1");
+    const featured = tracks.find(track => track.title === "Midnight Memory");
     if (featured) {
       handlePlayTrack(featured);
+    } else if (tracks.length > 0) {
+      handlePlayTrack(tracks[0]);
     }
   };
 
@@ -131,15 +179,26 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {recentTracks.map(track => (
-              <TrackCard 
-                key={track.id}
-                track={track}
-                isPlaying={isPlaying && playingTrackId === track.id}
-                onPlay={() => handlePlayTrack(track)}
-                onPause={handlePauseTrack}
-              />
-            ))}
+            {isLoadingTracks ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="aspect-square bg-muted animate-pulse rounded-md"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded"></div>
+                  <div className="h-3 bg-muted animate-pulse rounded w-2/3"></div>
+                </div>
+              ))
+            ) : (
+              tracks.map(track => (
+                <TrackCard 
+                  key={track.id}
+                  track={track}
+                  isPlaying={isPlaying && playingTrackId === track.id}
+                  onPlay={() => handlePlayTrack(track)}
+                  onPause={handlePauseTrack}
+                />
+              ))
+            )}
           </div>
         </section>
         

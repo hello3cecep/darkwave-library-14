@@ -1,81 +1,59 @@
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Upload, Library, Search, Menu, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
+import UserMenu from '@/components/UserMenu';
+import AuthModal from '@/components/AuthModal';
 
 const Navbar = () => {
-  const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
-  const navLinks = [
-    { name: 'Home', path: '/', icon: <Home className="w-5 h-5" /> },
-    { name: 'Search', path: '/search', icon: <Search className="w-5 h-5" /> },
-    { name: 'Upload', path: '/upload', icon: <Upload className="w-5 h-5" /> },
-    { name: 'My Library', path: '/library', icon: <Library className="w-5 h-5" /> },
-  ];
+  const openAuthModal = () => setIsAuthModalOpen(true);
+  const closeAuthModal = () => setIsAuthModalOpen(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-background/80 backdrop-blur-lg border-b border-white/5">
-      <div className="container mx-auto px-4 md:px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">M</span>
+    <>
+      <nav className="bg-background/80 backdrop-blur-md fixed top-0 left-0 right-0 z-50 border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center">
+            <Link to="/" className="text-xl font-bold mr-8">MusiStream</Link>
+            
+            <div className="hidden md:flex space-x-6">
+              <Link to="/" className="text-sm font-medium">Home</Link>
+              <Link to="/browse" className="text-sm font-medium">Browse</Link>
+              {user && (
+                <Link to="/library" className="text-sm font-medium">Library</Link>
+              )}
             </div>
-            <span className="text-xl font-semibold tracking-tight">Musicly</span>
-          </Link>
-          
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={cn(
-                  "nav-link flex items-center gap-2",
-                  location.pathname === link.path && "active"
-                )}
-              >
-                {link.icon}
-                <span>{link.name}</span>
-              </Link>
-            ))}
           </div>
           
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden flex items-center text-muted-foreground"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="relative hidden md:block w-48 lg:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search..."
+                className="w-full pl-8"
+              />
+            </div>
+            
+            {user && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/upload">Upload</Link>
+              </Button>
+            )}
+            
+            <UserMenu onOpenAuthModal={openAuthModal} />
+          </div>
         </div>
-      </div>
+      </nav>
       
-      {/* Mobile Navigation */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden absolute w-full bg-card border-b border-white/5 animate-slide-down">
-          <div className="container mx-auto px-4 py-4 flex flex-col space-y-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={cn(
-                  "nav-link flex items-center gap-2 py-3",
-                  location.pathname === link.path && "active"
-                )}
-              >
-                {link.icon}
-                <span>{link.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </nav>
+      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+    </>
   );
 };
 

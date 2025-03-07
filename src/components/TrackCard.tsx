@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Play, Pause, Heart } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
+import LikeButton from './LikeButton';
 
 export type Track = {
   id: string;
@@ -64,9 +65,7 @@ const TrackCard: React.FC<TrackCardProps> = ({
         
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{track.duration}</span>
-          <button className="text-muted-foreground hover:text-primary transition-colors" aria-label="Like">
-            <Heart className="w-4 h-4" />
-          </button>
+          <LikeButton trackId={track.id} size="sm" />
         </div>
       </div>
     );
@@ -100,9 +99,7 @@ const TrackCard: React.FC<TrackCardProps> = ({
             <h3 className="font-medium truncate">{track.title}</h3>
             <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
           </div>
-          <button className="text-muted-foreground hover:text-primary transition-colors" aria-label="Like">
-            <Heart className="w-4 h-4" />
-          </button>
+          <LikeButton trackId={track.id} size="sm" />
         </div>
       </div>
     </div>
