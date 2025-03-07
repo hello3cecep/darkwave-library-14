@@ -1,55 +1,12 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import MusicPlayer from '@/components/MusicPlayer';
 import TrackCard, { Track } from '@/components/TrackCard';
 import { Search, Plus, Library as LibraryIcon, GridIcon, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const libraryTracks: Track[] = [
-  {
-    id: "1",
-    title: "Midnight Memory",
-    artist: "Aurora Skies",
-    coverUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop",
-    duration: "3:45",
-  },
-  {
-    id: "2",
-    title: "Ocean Waves",
-    artist: "Serene Sound",
-    coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=2070&auto=format&fit=crop",
-    duration: "4:12",
-  },
-  {
-    id: "3",
-    title: "Neon Dreams",
-    artist: "Electric Echo",
-    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=2074&auto=format&fit=crop",
-    duration: "3:28",
-  },
-  {
-    id: "4",
-    title: "Mountain High",
-    artist: "The Climbers",
-    coverUrl: "https://images.unsplash.com/photo-1501612780327-45045538702b?q=80&w=2070&auto=format&fit=crop",
-    duration: "5:16",
-  },
-  {
-    id: "5",
-    title: "Urban Jungle",
-    artist: "City Lights",
-    coverUrl: "https://images.unsplash.com/photo-1477233534935-f5e6fe7c1159?q=80&w=2070&auto=format&fit=crop",
-    duration: "3:56",
-  },
-  {
-    id: "6",
-    title: "Desert Mirage",
-    artist: "Sand Dunes",
-    coverUrl: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?q=80&w=2070&auto=format&fit=crop",
-    duration: "4:32",
-  }
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 const playlists = [
   {
@@ -78,14 +35,70 @@ type ViewMode = 'grid' | 'list';
 type LibrarySection = 'tracks' | 'albums' | 'artists' | 'playlists';
 
 const Library = () => {
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeSection, setActiveSection] = useState<LibrarySection>('tracks');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
-  const filteredTracks = libraryTracks.filter(track => 
+  useEffect(() => {
+    async function fetchTracks() {
+      try {
+        setIsLoading(true);
+        
+        let query = supabase
+          .from('tracks')
+          .select('*');
+          
+        if (user) {
+          query = query.or(`uploaded_by.eq.${user.id},is_public.eq.true`);
+        } else {
+          query = query.eq('is_public', true);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching tracks:', error);
+          toast({
+            title: 'Failed to load tracks',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        const formattedTracks: Track[] = data.map(track => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist,
+          coverUrl: track.cover_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop',
+          duration: track.duration,
+          description: track.description,
+        }));
+        
+        setTracks(formattedTracks);
+      } catch (error) {
+        console.error('Error in fetchTracks:', error);
+        toast({
+          title: 'Something went wrong',
+          description: 'Failed to load tracks from the library',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchTracks();
+  }, [user, toast]);
+  
+  const filteredTracks = tracks.filter(track => 
     track.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     track.artist.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -107,24 +120,40 @@ const Library = () => {
   const handleNext = () => {
     if (!currentTrack) return;
     
-    const currentIndex = libraryTracks.findIndex(track => track.id === currentTrack.id);
-    const nextIndex = (currentIndex + 1) % libraryTracks.length;
-    setCurrentTrack(libraryTracks[nextIndex]);
-    setPlayingTrackId(libraryTracks[nextIndex].id);
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id);
+    const nextIndex = (currentIndex + 1) % tracks.length;
+    setCurrentTrack(tracks[nextIndex]);
+    setPlayingTrackId(tracks[nextIndex].id);
   };
   
   const handlePrevious = () => {
     if (!currentTrack) return;
     
-    const currentIndex = libraryTracks.findIndex(track => track.id === currentTrack.id);
-    const prevIndex = (currentIndex - 1 + libraryTracks.length) % libraryTracks.length;
-    setCurrentTrack(libraryTracks[prevIndex]);
-    setPlayingTrackId(libraryTracks[prevIndex].id);
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id);
+    const prevIndex = (currentIndex - 1 + tracks.length) % tracks.length;
+    setCurrentTrack(tracks[prevIndex]);
+    setPlayingTrackId(tracks[prevIndex].id);
   };
   
   const renderSectionContent = () => {
     switch(activeSection) {
       case 'tracks':
+        if (isLoading) {
+          return (
+            <div className="flex items-center justify-center h-40">
+              <p className="text-muted-foreground">Loading tracks...</p>
+            </div>
+          );
+        }
+        
+        if (filteredTracks.length === 0) {
+          return (
+            <div className="flex items-center justify-center h-40 text-muted-foreground">
+              <p>No tracks found{searchQuery ? ' matching your search' : ' in your library'}</p>
+            </div>
+          );
+        }
+        
         return (
           <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-4 gap-4' : 'space-y-2'}>
             {filteredTracks.map(track => (
