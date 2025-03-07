@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import FeaturedContent from '@/components/FeaturedContent';
 import TrackCard, { Track } from '@/components/TrackCard';
 import MusicPlayer from '@/components/MusicPlayer';
+import { Play } from 'lucide-react';
 
-// Mock data for our application
 const featuredContent = {
   title: "Midnight Memory",
   artist: "Aurora Skies",
